@@ -2,4 +2,4 @@
 
 Welcome to the Swagger-UI documentation!
 
-A table of contents can be found at `SUMMARY.md`.
+A table of contents can be found at [SUMMARY.md](SUMMARY.md).

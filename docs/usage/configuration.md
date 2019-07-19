@@ -34,7 +34,7 @@ Parameter name | Docker variable | Description
 
 ##### Plugin system
 
-Read more about the plugin system in the [Customization documentation](/docs/customization/overview.md).
+Read more about the plugin system in the [Customization documentation](../customization/overview.md).
 
 Parameter name | Docker variable | Description
 --- | --- | -----
@@ -46,7 +46,7 @@ Parameter name | Docker variable | Description
 
 Parameter name | Docker variable | Description
 --- | --- | -----
-<a name="deepLinking"></a>`deepLinking` | `DEEP_LINKING` | `Boolean=false`. If set to `true`, enables deep linking for tags and operations. See the [Deep Linking documentation](/docs/usage/deep-linking.md) for more information.
+<a name="deepLinking"></a>`deepLinking` | `DEEP_LINKING` | `Boolean=false`. If set to `true`, enables deep linking for tags and operations. See the [Deep Linking documentation](deep-linking.md) for more information.
 <a name="displayOperationId"></a>`displayOperationId` | `DISPLAY_OPERATION_ID` | `Boolean=false`. Controls the display of operationId in operations list. The default is `false`.
 <a name="defaultModelsExpandDepth"></a>`defaultModelsExpandDepth` | `DEFAULT_MODELS_EXPAND_DEPTH` | `Number=1`. The default expansion depth for models (set to -1 completely hide the models).
 <a name="defaultModelExpandDepth"></a>`defaultModelExpandDepth` | `DEFAULT_MODEL_EXPAND_DEPTH` | `Number=1`. The default expansion depth for the model on the model-example section.
