@@ -11,7 +11,7 @@ export default class OperationContainer extends PureComponent {
     const { tryItOutEnabled } = props.getConfigs()
 
     this.state = {
-      tryItOutEnabled: tryItOutEnabled === true || tryItOutEnabled === "true",
+      tryItOutEnabled,
       executeInProgress: false
     }
   }
@@ -61,14 +61,13 @@ export default class OperationContainer extends PureComponent {
     const showSummary = layoutSelectors.showSummary()
     const operationId = op.getIn(["operation", "__originalOperationId"]) || op.getIn(["operation", "operationId"]) || opId(op.get("operation"), props.path, props.method) || op.get("id")
     const isShownKey = ["operations", props.tag, operationId]
-    const isDeepLinkingEnabled = deepLinking && deepLinking !== "false"
     const allowTryItOut = supportedSubmitMethods.indexOf(props.method) >= 0 && (typeof props.allowTryItOut === "undefined" ?
       props.specSelectors.allowTryItOutFor(props.path, props.method) : props.allowTryItOut)
     const security = op.getIn(["operation", "security"]) || props.specSelectors.security()
 
     return {
       operationId,
-      isDeepLinkingEnabled,
+      isDeepLinkingEnabled: deepLinking,
       showSummary,
       displayOperationId,
       displayRequestDuration,
@@ -91,7 +90,7 @@ export default class OperationContainer extends PureComponent {
     }
   }
 
-  componentWillReceiveProps(nextProps) {
+  UNSAFE_componentWillReceiveProps(nextProps) {
     const { response, isShown } = nextProps
     const resolvedSubtree = this.getResolvedSubtree()
 
@@ -120,6 +119,11 @@ export default class OperationContainer extends PureComponent {
 
   onTryoutClick =() => {
     this.setState({tryItOutEnabled: !this.state.tryItOutEnabled})
+  }
+
+  onResetClick = (pathMethod) => {
+    const defaultRequestBodyValue = this.props.oas3Selectors.selectDefaultRequestBodyValue(...pathMethod)
+    this.props.oas3Actions.setRequestBodyValue({ value: defaultRequestBodyValue, pathMethod })
   }
 
   onExecute = () => {
@@ -225,6 +229,7 @@ export default class OperationContainer extends PureComponent {
 
         toggleShown={this.toggleShown}
         onTryoutClick={this.onTryoutClick}
+        onResetClick={this.onResetClick}
         onCancelClick={this.onCancelClick}
         onExecute={this.onExecute}
         specPath={specPath}

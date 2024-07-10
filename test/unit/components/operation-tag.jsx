@@ -1,8 +1,8 @@
 import React from "react"
 import { shallow } from "enzyme"
-import OperationTag from "components/operation-tag"
+import OperationTag from "core/components/operation-tag"
 import Im from "immutable"
-import { Link } from "components/layout-utils"
+import { Link } from "core/components/layout-utils"
 
 describe("<OperationTag/>", function(){
   it("render externalDocs URL for swagger v2", function(){
@@ -44,7 +44,7 @@ describe("<OperationTag/>", function(){
 
     const opblockTag = wrapper.find(".opblock-tag")
     expect(opblockTag.length).toEqual(1)
-    expect(opblockTag.getNode().type).toEqual("h3")
+    expect(opblockTag.getElement().type).toEqual("h3")
 
     const renderedLink = wrapper.find("Link")
     expect(renderedLink.length).toEqual(1)

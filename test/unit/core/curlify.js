@@ -1,6 +1,7 @@
 import Im from "immutable"
 import { requestSnippetGenerator_curl_bash as curl } from "core/plugins/request-snippets/fn.js"
 import win from "core/window"
+import { fromJSOrdered } from "core/utils"
 
 describe("curlify", function () {
 
@@ -200,6 +201,52 @@ describe("curlify", function () {
     expect(curlified).toEqual("curl -X 'POST' \\\n  'http://example.com' \\\n  -H 'content-type: multipart/form-data' \\\n  -F 'id=123' \\\n  -F 'file=@file.txt;type=text/plain'")
   })
 
+  it("should print a curl with formData containing JSON and file", async function () {
+    /**
+     * Specialized sub-class of File class, that only
+     * accepts string data and retain this data in `data`
+     * public property throughout the lifecycle of its instances.
+     *
+     * This sub-class is exclusively used only when Encoding Object
+     * is defined within the Media Type Object (OpenAPI 3.x.y).
+     *
+     * Instances of a similar sub-class are produced by swagger-client request builder.
+     */
+    class FileWithData extends win.File {
+      constructor(data, name = "", options = {}) {
+        super([data], name, options)
+        this.data = data
+      }
+
+      valueOf() {
+        return this.data
+      }
+
+      toString() {
+        return this.valueOf()
+      }
+    }
+
+    let file = new win.File(["data"], "file.txt", { type: "text/plain" })
+    let optionsJSON = JSON.stringify({ some_array: ["string"], max_bar: 300 })
+    let options = new FileWithData(optionsJSON, "", { type: "application/json;charset=utf-8" })
+
+    let formData = new win.FormData()
+    formData.set("options", options)
+    formData.set("file", file)
+
+    let req = {
+      url: "http://example.com",
+      method: "POST",
+      headers: { "content-type": "multipart/form-data" },
+      body: formData,
+    }
+
+    let curlified = curl(fromJSOrdered(req))
+
+    expect(curlified).toEqual(`curl -X 'POST' \\\n  'http://example.com' \\\n  -H 'content-type: multipart/form-data' \\\n  -F 'options={"some_array":["string"],"max_bar":300};type=application/json;charset=utf-8' \\\n  -F 'file=@file.txt;type=text/plain'`)
+  })
+
   it("should print a curl without form data type if type is unknown", function () {
     let file = new win.File([""], "file.txt", { type: "" })
     // file.name = "file.txt"
@@ -218,6 +265,21 @@ describe("curlify", function () {
     let curlified = curl(Im.fromJS(req))
 
     expect(curlified).toEqual("curl -X 'POST' \\\n  'http://example.com' \\\n  -H 'content-type: multipart/form-data' \\\n  -F 'id=123' \\\n  -F 'file=@file.txt'")
+  })
+
+  it("should print a curl with data-binary if body is instance of File and it is not a multipart form data request", function () {
+    let file = new win.File([""], "file.txt", { type: "" })
+
+    let req = {
+      url: "http://example.com",
+      method: "POST",
+      headers: { "content-type": "application/octet-stream" },
+      body: file
+    }
+
+    let curlified = curl(Im.fromJS(req))
+
+    expect(curlified).toEqual("curl -X 'POST' \\\n  'http://example.com' \\\n  -H 'content-type: application/octet-stream' \\\n  --data-binary '@file.txt'")
   })
 
   it("prints a curl post statement from an object", function () {
@@ -305,7 +367,7 @@ describe("curlify", function () {
   })
 
   describe("POST when header value is 'multipart/form-data' but header name is not 'content-type'", function () {
-    it("shoud print a proper curl as -d <data>, when file type is provided", function () {
+    it("should print a proper curl as -d <data>, when file type is provided", function () {
       let file = new win.File([""], "file.txt", { type: "text/plain" })
       // file.name = "file.txt"
       // file.type = "text/plain"
@@ -325,7 +387,7 @@ describe("curlify", function () {
       expect(curlified).toEqual("curl -X 'POST' \\\n  'http://example.com' \\\n  -H 'x-custom-name: multipart/form-data' \\\n  -d '{\n  \"id\": \"123\",\n  \"file\": {\n    \"name\": \"file.txt\",\n    \"type\": \"text/plain\"\n  }\n}'")
     })
 
-    it("shoud print a proper curl as -d <data>, no file type provided", function () {
+    it("should print a proper curl as -d <data>, no file type provided", function () {
       let file = new win.File([""], "file.txt")
       // file.name = "file.txt"
       // file.type = "text/plain"

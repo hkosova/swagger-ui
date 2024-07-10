@@ -29,7 +29,7 @@ export function authorize(payload) {
 
 export const authorizeWithPersistOption = (payload) => ( { authActions } ) => {
   authActions.authorize(payload)
-  authActions.persistAuthorizationIfNeeded()  
+  authActions.persistAuthorizationIfNeeded()
 }
 
 export function logout(payload) {
@@ -41,7 +41,7 @@ export function logout(payload) {
 
 export const logoutWithPersistOption = (payload) => ( { authActions } ) => {
   authActions.logout(payload)
-  authActions.persistAuthorizationIfNeeded()  
+  authActions.persistAuthorizationIfNeeded()
 }
 
 export const preAuthorizeImplicit = (payload) => ( { authActions, errActions } ) => {
@@ -85,7 +85,7 @@ export function authorizeOauth2(payload) {
 
 export const authorizeOauth2WithPersistOption = (payload) => ( { authActions } ) => {
   authActions.authorizeOauth2(payload)
-  authActions.persistAuthorizationIfNeeded()  
+  authActions.persistAuthorizationIfNeeded()
 }
 
 export const authorizePassword = ( auth ) => ( { authActions } ) => {
@@ -273,9 +273,16 @@ export function restoreAuthorization(payload) {
 
 export const persistAuthorizationIfNeeded = () => ( { authSelectors, getConfigs } ) => {
   const configs = getConfigs()
-  if (configs.persistAuthorization)
-  {
-    const authorized = authSelectors.authorized()
-    localStorage.setItem("authorized", JSON.stringify(authorized.toJS()))
-  }
+
+  if (!configs.persistAuthorization) return
+
+  // persist authorization to local storage
+  const authorized = authSelectors.authorized().toJS()
+  localStorage.setItem("authorized", JSON.stringify(authorized))
+}
+
+export const authPopup = (url, swaggerUIRedirectOauth2) => ( ) => {
+  win.swaggerUIRedirectOauth2 = swaggerUIRedirectOauth2
+
+  win.open(url)
 }

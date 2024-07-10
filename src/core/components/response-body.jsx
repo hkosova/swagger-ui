@@ -14,7 +14,6 @@ export default class ResponseBody extends React.PureComponent {
   static propTypes = {
     content: PropTypes.any.isRequired,
     contentType: PropTypes.string,
-    getConfigs: PropTypes.func.isRequired,
     getComponent: PropTypes.func.isRequired,
     headers: PropTypes.object,
     url: PropTypes.string
@@ -51,19 +50,21 @@ export default class ResponseBody extends React.PureComponent {
   }
 
   render() {
-    let { content, contentType, url, headers={}, getConfigs, getComponent } = this.props
+    let { content, contentType, url, headers={}, getComponent } = this.props
     const { parsedContent } = this.state
-    const HighlightCode = getComponent("highlightCode")
+    const HighlightCode = getComponent("HighlightCode", true)
     const downloadName = "response_" + new Date().getTime()
     let body, bodyEl
     url = url || ""
 
     if (
-      /^application\/octet-stream/i.test(contentType) ||
-      (headers["Content-Disposition"] && (/attachment/i).test(headers["Content-Disposition"])) ||
-      (headers["content-disposition"] && (/attachment/i).test(headers["content-disposition"])) ||
-      (headers["Content-Description"] && (/File Transfer/i).test(headers["Content-Description"])) ||
-      (headers["content-description"] && (/File Transfer/i).test(headers["content-description"]))) {
+      (/^application\/octet-stream/i.test(contentType) ||
+        (headers["Content-Disposition"] && /attachment/i.test(headers["Content-Disposition"])) ||
+        (headers["content-disposition"] && /attachment/i.test(headers["content-disposition"])) ||
+        (headers["Content-Description"] && /File Transfer/i.test(headers["Content-Description"])) ||
+        (headers["content-description"] && /File Transfer/i.test(headers["content-description"]))) &&
+      (content.size > 0 || content.length > 0)
+    ) {
       // Download
 
       if ("Blob" in window) {
@@ -106,7 +107,7 @@ export default class ResponseBody extends React.PureComponent {
         body = "can't parse JSON.  Raw result:\n\n" + content
       }
 
-      bodyEl = <HighlightCode language={language} downloadable fileName={`${downloadName}.json`} value={ body } getConfigs={ getConfigs } canCopy />
+      bodyEl = <HighlightCode language={language} downloadable fileName={`${downloadName}.json`} canCopy>{body}</HighlightCode>
 
       // XML
     } else if (/xml/i.test(contentType)) {
@@ -114,29 +115,29 @@ export default class ResponseBody extends React.PureComponent {
         textNodesOnSameLine: true,
         indentor: "  "
       })
-      bodyEl = <HighlightCode downloadable fileName={`${downloadName}.xml`} value={ body } getConfigs={ getConfigs } canCopy />
+      bodyEl = <HighlightCode downloadable fileName={`${downloadName}.xml`} canCopy>{body}</HighlightCode>
 
       // HTML or Plain Text
     } else if (toLower(contentType) === "text/html" || /text\/plain/.test(contentType)) {
-      bodyEl = <HighlightCode downloadable fileName={`${downloadName}.html`} value={ content } getConfigs={ getConfigs } canCopy />
+      bodyEl = <HighlightCode downloadable fileName={`${downloadName}.html`} canCopy>{content}</HighlightCode>
 
       // CSV
     } else if (toLower(contentType) === "text/csv" || /text\/csv/.test(contentType)) {
-      bodyEl = <HighlightCode downloadable fileName={`${downloadName}.csv`} value={ content } getConfigs={ getConfigs } canCopy />
+      bodyEl = <HighlightCode downloadable fileName={`${downloadName}.csv`} canCopy>{content}</HighlightCode>
 
       // Image
     } else if (/^image\//i.test(contentType)) {
       if(contentType.includes("svg")) {
         bodyEl = <div> { content } </div>
       } else {
-        bodyEl = <img className="full-width" src={ window.URL.createObjectURL(content) } />
+        bodyEl = <img src={ window.URL.createObjectURL(content) } />
       }
 
       // Audio
     } else if (/^audio\//i.test(contentType)) {
-      bodyEl = <pre className="microlight"><audio controls><source src={ url } type={ contentType } /></audio></pre>
+      bodyEl = <pre className="microlight"><audio controls key={ url }><source src={ url } type={ contentType } /></audio></pre>
     } else if (typeof content === "string") {
-      bodyEl = <HighlightCode downloadable fileName={`${downloadName}.txt`} value={ content } getConfigs={ getConfigs } canCopy />
+      bodyEl = <HighlightCode downloadable fileName={`${downloadName}.txt`} canCopy>{content}</HighlightCode>
     } else if ( content.size > 0 ) {
       // We don't know the contentType, but there was some content returned
       if(parsedContent) {
@@ -146,7 +147,7 @@ export default class ResponseBody extends React.PureComponent {
           <p className="i">
             Unrecognized response type; displaying content as text.
           </p>
-          <HighlightCode downloadable fileName={`${downloadName}.txt`} value={ parsedContent } getConfigs={ getConfigs } canCopy />
+          <HighlightCode downloadable fileName={`${downloadName}.txt`} canCopy>{parsedContent}</HighlightCode>
         </div>
 
       } else {

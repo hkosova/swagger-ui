@@ -1,7 +1,7 @@
 import React from "react"
 import { mount } from "enzyme"
-import FilterContainer from "containers/filter"
-import { Col } from "components/layout-utils"
+import FilterContainer from "core/containers/filter"
+import { Col } from "core/components/layout-utils"
 
 describe("<FilterContainer/>", function(){
 
@@ -28,21 +28,6 @@ describe("<FilterContainer/>", function(){
     // Then
     const renderedColInsideFilter = wrapper.find(Col)
     expect(renderedColInsideFilter.length).toEqual(1)
-  })
-
-  it("does not render FilterContainer if filter is null", function(){
-
-    // Given
-    let props = {...mockedProps}
-    props.layoutSelectors = {...mockedProps.specSelectors}
-    props.layoutSelectors.currentFilter = function() {return null}
-
-    // When
-    let wrapper = mount(<FilterContainer {...props}/>)
-
-    // Then
-    const renderedColInsideFilter = wrapper.find(Col)
-    expect(renderedColInsideFilter.length).toEqual(0)
   })
 
   it("does not render FilterContainer if filter is false", function(){

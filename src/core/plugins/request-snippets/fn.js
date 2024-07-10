@@ -1,5 +1,6 @@
+import { List, Map } from "immutable"
 import win from "../../window"
-import { Map } from "immutable"
+
 
 /**
  * if duplicate key name existed from FormData entries,
@@ -49,15 +50,14 @@ const escapePowershell = (str) => {
     return str
   }
   if (/\n/.test(str)) {
-    return "@\"\n" + str.replace(/"/g, "\\\"").replace(/`/g, "``").replace(/\$/, "`$") + "\n\"@"
+    const escaped = str.replace(/`/g, "``").replace(/\$/g, "`$")
+    return `@"\n${escaped}\n"@`
   }
-  // eslint-disable-next-line no-useless-escape
-  if (!/^[_\/-]/g.test(str))
-    return "'" + str
-      .replace(/"/g, "\"\"")
-      .replace(/'/g, "''") + "'"
-  else
-    return str
+  if (!/^[_\/-]/.test(str)) { // eslint-disable-line no-useless-escape
+    const escaped = str.replace(/'/g, "''")
+    return `'${escaped}'`
+  }
+  return str
 }
 
 function getStringBodyOfMap(request) {
@@ -83,7 +83,8 @@ const curlify = (request, escape, newLine, ext = "") => {
   let headers = request.get("headers")
   curlified += "curl" + ext
 
-  if (request.has("curlOptions")) {
+  const curlOptions = request.get("curlOptions")
+  if (List.isList(curlOptions) && !curlOptions.isEmpty()) {
     addWords(...request.get("curlOptions"))
   }
 
@@ -103,24 +104,40 @@ const curlify = (request, escape, newLine, ext = "") => {
     }
   }
 
-  if (request.get("body")) {
+  const body = request.get("body")
+  if (body) {
     if (isMultipartFormDataRequest && ["POST", "PUT", "PATCH"].includes(request.get("method"))) {
-      for (let [k, v] of request.get("body").entrySeq()) {
+      for (let [k, v] of body.entrySeq()) {
         let extractedKey = extractKey(k)
         addNewLine()
         addIndent()
         addWordsWithoutLeadingSpace("-F")
-        if (v instanceof win.File) {
+
+        /**
+         * SwaggerClient produces specialized sub-class of File class, that only
+         * accepts string data and retain this data in `data`
+         * public property throughout the lifecycle of its instances.
+         *
+         * This sub-class is exclusively used only when Encoding Object
+         * is defined within the Media Type Object (OpenAPI 3.x.y).
+         */
+        if (v instanceof win.File && typeof v.valueOf() === "string") {
+          addWords(`${extractedKey}=${v.data}${v.type ? `;type=${v.type}` : ""}`)
+        } else if (v instanceof win.File) {
           addWords(`${extractedKey}=@${v.name}${v.type ? `;type=${v.type}` : ""}`)
         } else {
           addWords(`${extractedKey}=${v}`)
         }
       }
+    } else if(body instanceof win.File) {
+      addNewLine()
+      addIndent()
+      addWordsWithoutLeadingSpace(`--data-binary '@${body.name}'`)
     } else {
       addNewLine()
       addIndent()
       addWordsWithoutLeadingSpace("-d ")
-      let reqBody = request.get("body")
+      let reqBody = body
       if (!Map.isMap(reqBody)) {
         if (typeof reqBody !== "string") {
           reqBody = JSON.stringify(reqBody)
@@ -130,7 +147,7 @@ const curlify = (request, escape, newLine, ext = "") => {
         addWordsWithoutLeadingSpace(getStringBodyOfMap(request))
       }
     }
-  } else if (!request.get("body") && request.get("method") === "POST") {
+  } else if (!body && request.get("method") === "POST") {
     addNewLine()
     addIndent()
     addWordsWithoutLeadingSpace("-d ''")

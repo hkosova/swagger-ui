@@ -4,8 +4,8 @@ import Im, { fromJS, Map } from "immutable"
 import deepExtend from "deep-extend"
 import { combineReducers } from "redux-immutable"
 import { serializeError } from "serialize-error"
-import assignDeep from "@kyleshockey/object-assign-deep"
-import { NEW_THROWN_ERR } from "corePlugins/err/actions"
+import merge from "lodash/merge"
+import { NEW_THROWN_ERR } from "core/plugins/err/actions"
 import win from "core/window"
 
 import { systemThunkMiddleware, isFn, objMap, objReduce, isObject, isArray, isFunc } from "core/utils"
@@ -35,7 +35,6 @@ export default class Store {
     deepExtend(this, {
       state: {},
       plugins: [],
-      pluginsOptions: {},
       system: {
         configs: {},
         fn: {},
@@ -64,7 +63,7 @@ export default class Store {
   }
 
   register(plugins, rebuild=true) {
-    var pluginSystem = combinePlugins(plugins, this.getSystem(), this.pluginsOptions)
+    var pluginSystem = combinePlugins(plugins, this.getSystem())
     systemExtend(this.system, pluginSystem)
     if(rebuild) {
       this.buildSystem()
@@ -311,21 +310,19 @@ export default class Store {
 
 }
 
-function combinePlugins(plugins, toolbox, pluginOptions) {
+function combinePlugins(plugins, toolbox) {
   if(isObject(plugins) && !isArray(plugins)) {
-    return assignDeep({}, plugins)
+    return merge({}, plugins)
   }
 
   if(isFunc(plugins)) {
-    return combinePlugins(plugins(toolbox), toolbox, pluginOptions)
+    return combinePlugins(plugins(toolbox), toolbox)
   }
 
   if(isArray(plugins)) {
-    const dest = pluginOptions.pluginLoadType === "chain" ? toolbox.getComponents() : {}
-
     return plugins
-    .map(plugin => combinePlugins(plugin, toolbox, pluginOptions))
-    .reduce(systemExtend, dest)
+      .map(plugin => combinePlugins(plugin, toolbox))
+      .reduce(systemExtend, { components: toolbox.getComponents() })
   }
 
   return {}

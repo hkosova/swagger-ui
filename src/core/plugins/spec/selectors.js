@@ -1,7 +1,7 @@
 import { createSelector } from "reselect"
-import { sorters } from "core/utils"
+import constant from "lodash/constant"
+import { sorters, paramToIdentifier } from "core/utils"
 import { fromJS, Set, Map, OrderedMap, List } from "immutable"
-import { paramToIdentifier } from "../../utils"
 
 const DEFAULT_TAG = "default"
 
@@ -36,6 +36,11 @@ export const specSource = createSelector(
 export const specJson = createSelector(
   state,
   spec => spec.get("json", Map())
+)
+
+export const specJS = createSelector(
+  specJson,
+  (spec) => spec.toJS()
 )
 
 export const specResolved = createSelector(
@@ -113,6 +118,8 @@ export const paths = createSelector(
 	specJsonWithResolvedSubtrees,
 	spec => spec.get("paths")
 )
+
+export const validOperationMethods = constant(["get", "put", "post", "delete", "options", "head", "patch"])
 
 export const operations = createSelector(
   paths,
@@ -198,9 +205,11 @@ export const schemes = createSelector(
 )
 
 export const operationsWithRootInherited = createSelector(
-  operations,
-  consumes,
-  produces,
+  [
+    operations,
+    consumes,
+    produces
+  ],
   (operations, consumes, produces) => {
     return operations.map( ops => ops.update("operation", op => {
       if(op) {
@@ -365,6 +374,9 @@ export function parameterValues(state, pathMethod, isXml) {
   let paramValues = operationWithMeta(state, ...pathMethod).get("parameters", List())
   return paramValues.reduce( (hash, p) => {
     let value = isXml && p.get("in") === "body" ? p.get("value_xml") : p.get("value")
+    if (List.isList(value)) {
+      value = value.filter(v => v !== "")
+    }
     return hash.set(paramToIdentifier(p, { allowHashes: false }), value)
   }, fromJS({}))
 }
@@ -477,19 +489,52 @@ export const canExecuteScheme = ( state, path, method ) => {
   return ["http", "https"].indexOf(operationScheme(state, path, method)) > -1
 }
 
-export const validateBeforeExecute = ( state, pathMethod ) => {
+export const validationErrors = (state, pathMethod) => {
   pathMethod = pathMethod || []
-  let paramValues = state.getIn(["meta", "paths", ...pathMethod, "parameters"], fromJS([]))
-  let isValid = true
+  const paramValues = state.getIn(["meta", "paths", ...pathMethod, "parameters"], fromJS([]))
+  const result = []
 
-  paramValues.forEach( (p) => {
-    let errors = p.get("errors")
-    if ( errors && errors.count() ) {
-      isValid = false
+  if (paramValues.length === 0) return result
+
+  const getErrorsWithPaths = (errors, path = []) => {
+    const getNestedErrorsWithPaths = (e, path) => {
+      const currPath = [...path, e.get("propKey") || e.get("index")]
+      return Map.isMap(e.get("error")) 
+        ? getErrorsWithPaths(e.get("error"), currPath) 
+        : { error: e.get("error"), path: currPath }
+    }
+
+    return List.isList(errors)
+     ? errors.map((e) => (Map.isMap(e) ? getNestedErrorsWithPaths(e, path) : { error: e, path }))
+     : getNestedErrorsWithPaths(errors, path)
+  }
+
+  const formatError = (error, path, paramName) => {
+    path = path.reduce((acc, curr) => {
+      return typeof curr === "number" 
+        ? `${acc}[${curr}]` 
+        : acc 
+        ? `${acc}.${curr}` 
+        : curr
+    }, "")
+    return `For '${paramName}'${path ? ` at path '${path}'` : ""}: ${error}.`
+  }
+
+  paramValues.forEach( (p, key) => {
+    const paramName = key.split(".").slice(1, -1).join(".")
+    const errors = p.get("errors")
+    if (errors && errors.count()) {
+      const errorsWithPaths = getErrorsWithPaths(errors)
+      errorsWithPaths.forEach(({error, path}) => {
+        result.push(formatError(error, path, paramName))
+      })
     }
   })
+  return result
+}
 
-  return isValid
+export const validateBeforeExecute = (state, pathMethod) => {
+  return validationErrors(state, pathMethod).length === 0
 }
 
 export const getOAS3RequiredRequestBodyContentType = (state, pathMethod) => {

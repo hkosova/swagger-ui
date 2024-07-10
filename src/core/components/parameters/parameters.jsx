@@ -2,6 +2,7 @@ import React, { Component } from "react"
 import PropTypes from "prop-types"
 import { Map, List } from "immutable"
 import ImPropTypes from "react-immutable-proptypes"
+import createHtmlReadyId from "core/utils/create-html-ready-id"
 
 export default class Parameters extends Component {
 
@@ -25,6 +26,7 @@ export default class Parameters extends Component {
     tryItOutEnabled: PropTypes.bool,
     allowTryItOut: PropTypes.bool,
     onTryoutClick: PropTypes.func,
+    onResetClick: PropTypes.func,
     onCancelClick: PropTypes.func,
     onChangeKey: PropTypes.array,
     pathMethod: PropTypes.array.isRequired,
@@ -73,7 +75,7 @@ export default class Parameters extends Component {
       })
     }
   }
-
+  
   onChangeMediaType = ({ value, pathMethod }) => {
     let { specActions, oas3Selectors, oas3Actions } = this.props
     const userHasEditedBody = oas3Selectors.hasUserEditedBody(...pathMethod)
@@ -94,6 +96,7 @@ export default class Parameters extends Component {
 
     let {
       onTryoutClick,
+      onResetClick,
       parameters,
       allowTryItOut,
       tryItOutEnabled,
@@ -118,6 +121,8 @@ export default class Parameters extends Component {
     const isExecute = tryItOutEnabled && allowTryItOut
     const isOAS3 = specSelectors.isOAS3()
 
+    const regionId = createHtmlReadyId(`${pathMethod[1]}${pathMethod[0]}_requests`)
+    const controlId = `${regionId}_select`
 
     const requestBody = operation.get("requestBody")
 
@@ -161,7 +166,7 @@ export default class Parameters extends Component {
               enabled={tryItOutEnabled}
               onCancelClick={this.props.onCancelClick}
               onTryoutClick={onTryoutClick}
-              onResetClick={() => oas3Actions.setRequestBodyValue({ value: undefined, pathMethod })}/>
+              onResetClick={() => onResetClick(pathMethod)}/>
           ) : null}
         </div>
         {this.state.parametersVisible ? <div className="parameters-container">
@@ -213,15 +218,17 @@ export default class Parameters extends Component {
             <div className="opblock-section-header">
               <h4 className={`opblock-title parameter__name ${requestBody.get("required") && "required"}`}>Request
                 body</h4>
-              <label>
+              <label id={controlId}>
                 <ContentType
                   value={oas3Selectors.requestContentType(...pathMethod)}
                   contentTypes={requestBody.get("content", List()).keySeq()}
                   onChange={(value) => {
                     this.onChangeMediaType({ value, pathMethod })
                   }}
-                  className="body-param-content-type" 
-                  ariaLabel="Request content type" />
+                  className="body-param-content-type"
+                  ariaLabel="Request content type" 
+                  controlId={controlId}
+                />
               </label>
             </div>
             <div className="opblock-description-wrapper">
